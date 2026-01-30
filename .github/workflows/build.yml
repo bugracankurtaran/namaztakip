@@ -1,4 +1,4 @@
-name: CI
+name: Build APK Manually
 on:
   push:
     branches: [ main ]
@@ -8,10 +8,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      # 1. Gerekli Sistem Kütüphanelerini Yükle (Linux Sunucuya)
-      - name: Install dependencies
+      # 1. Gerekli Sistem Kütüphanelerini Yükle
+      - name: Install System Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -21,17 +21,26 @@ jobs:
             zlib1g-dev libgstreamer1.0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
             libffi-dev libssl-dev autoconf libtool libltdl-dev openjdk-17-jdk zip unzip
 
-      # 2. Buildozer'ı Çalıştır ve APK Yap
-      - name: Build with Buildozer
-        uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
-        with:
-          command: buildozer android debug
-          buildozer_version: master
+      # 2. Buildozer ve Cython Kurulumu
+      - name: Install Buildozer & Cython
+        run: |
+          pip3 install --upgrade pip
+          pip3 install --user --upgrade buildozer
+          pip3 install cython==0.29.33
 
-      # 3. Oluşan APK'yı Bize Ver (Artifacts Olarak Yükle)
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v2
+      # 3. İzinleri Ayarla (Buildozer bazen yetki ister)
+      - name: Fix Permissions
+        run: chmod +x main.py
+
+      # 4. APK'yı Derle (Debug Modu)
+      - name: Build with Buildozer
+        run: |
+          export PATH=$PATH:~/.local/bin
+          buildozer android debug
+
+      # 5. APK'yı Yükle (Artifacts)
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
-          name: namaz-takip-apk
+          name: NamazTakip-APK
           path: bin/*.apk
